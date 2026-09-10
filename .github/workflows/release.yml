@@ -66,9 +66,10 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Accept Android SDK Licenses
+      - name: Accept Android SDK Licenses & Install SDK 36
         run: |
           yes | sdkmanager --licenses 2>/dev/null || true
+          sdkmanager "platforms;android-36" "build-tools;36.0.0" 2>/dev/null || true
 
       - name: Sync Capacitor Android Project
         run: |
@@ -88,7 +89,7 @@ jobs:
 
           CODE="${{ github.event.inputs.version_code }}"
           if [ -z "$CODE" ]; then
-            CODE=$(date +%s)
+            CODE=$(date +%y%m%d%H)
           fi
 
           echo "version=$VER" >> "$GITHUB_OUTPUT"
@@ -96,8 +97,8 @@ jobs:
           echo "tag=v$VER" >> "$GITHUB_OUTPUT"
           echo "Building Monochrome Audio v$VER (Code: $CODE)"
 
-          sed -i "s/versionCode [0-9]*/versionCode $CODE/" android/app/build.gradle
-          sed -i "s/versionName \".*\"/versionName \"$VER\"/" android/app/build.gradle
+          sed -i -E "s/versionCode[[:space:]=]+[0-9]+/versionCode = $CODE/" android/app/build.gradle
+          sed -i -E "s/versionName[[:space:]=]+\".*\"/versionName = \"$VER\"/" android/app/build.gradle
 
       - name: Grant Execute Permission to Gradle Wrapper
         run: chmod +x android/gradlew
@@ -105,7 +106,7 @@ jobs:
       - name: Build Android APK (Debug / Direct-Install)
         run: |
           cd android
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleDebug --no-daemon --stacktrace
           cd ..
 
       - name: Prepare APK Distribution Artifacts
