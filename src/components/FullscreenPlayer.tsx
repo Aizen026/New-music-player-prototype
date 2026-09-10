@@ -14,7 +14,7 @@ import {
   Disc,
   FileText
 } from 'lucide-react';
-import { Track, RepeatMode, VisualizerMode } from '../types/monochrome';
+import { Track, RepeatMode, VisualizerMode, AppTheme } from '../types/monochrome';
 import { monochromeApi } from '../services/monochromeService';
 import { AudioVisualizer } from './AudioVisualizer';
 
@@ -30,6 +30,7 @@ interface FullscreenPlayerProps {
   repeatMode: RepeatMode;
   isShuffle: boolean;
   visualizerMode: VisualizerMode;
+  theme?: AppTheme;
   onTogglePlay: () => void;
   onSeek: (secs: number) => void;
   onPrevious: () => void;
@@ -54,6 +55,7 @@ export const FullscreenPlayer: React.FC<FullscreenPlayerProps> = ({
   repeatMode,
   isShuffle,
   visualizerMode,
+  theme = 'liquid-glass',
   onTogglePlay,
   onSeek,
   onPrevious,
@@ -164,14 +166,20 @@ export const FullscreenPlayer: React.FC<FullscreenPlayerProps> = ({
         {/* Right: Lyrics OR Large Metadata & Waveform */}
         <div className="flex-1 w-full max-w-lg h-72 sm:h-80 md:h-96 flex flex-col justify-center">
           {showLyricsTab ? (
-            <div className="w-full h-full bg-zinc-950/60 border border-zinc-800/80 rounded-2xl p-5 overflow-y-auto font-mono text-sm leading-relaxed text-zinc-300">
-              <h4 className="text-xs uppercase tracking-wider text-zinc-400 mb-3 border-b border-zinc-800 pb-2">
+            <div
+              className={`w-full h-full rounded-2xl p-5 overflow-y-auto font-mono text-sm leading-relaxed ${
+                theme === 'liquid-glass'
+                  ? 'liquid-glass-elevated text-white border-white/20'
+                  : 'bg-zinc-950/60 border border-zinc-800/80 text-zinc-300'
+              }`}
+            >
+              <h4 className="text-xs uppercase tracking-wider text-zinc-400 mb-3 border-b border-white/10 pb-2">
                 Synced Lyrics
               </h4>
               {loadingLyrics ? (
                 <p className="text-zinc-500 italic py-12 text-center">Loading lyrics from Monochrome...</p>
               ) : lyrics ? (
-                <div className="whitespace-pre-line text-zinc-200">{lyrics}</div>
+                <div className="whitespace-pre-line text-zinc-200 leading-relaxed font-sans text-base">{lyrics}</div>
               ) : (
                 <p className="text-zinc-500 italic py-12 text-center">No lyrics available for this track.</p>
               )}
@@ -179,20 +187,26 @@ export const FullscreenPlayer: React.FC<FullscreenPlayerProps> = ({
           ) : (
             <div className="space-y-6">
               <div>
-                <span className="text-xs font-mono uppercase tracking-widest text-zinc-400 px-2 py-0.5 rounded bg-zinc-800/80 border border-zinc-700">
-                  {currentTrack.audioQuality === 'LOSSLESS' ? 'FLAC 24-BIT' : '320 KBPS AAC'}
+                <span className="text-xs font-mono uppercase tracking-widest text-cyan-300 px-2 py-0.5 rounded bg-cyan-500/20 border border-cyan-500/30 font-semibold">
+                  {currentTrack.audioQuality === 'LOSSLESS' ? 'FLAC 24-BIT MASTER' : '320 KBPS AAC'}
                 </span>
-                <h1 className="text-3xl sm:text-4xl font-black text-zinc-100 mt-3 tracking-tight">
+                <h1 className="text-3xl sm:text-4xl font-black text-white mt-3 tracking-tight">
                   {currentTrack.title}
                 </h1>
-                <p className="text-lg text-zinc-400 font-medium mt-1">{currentTrack.artist?.name}</p>
+                <p className="text-lg text-zinc-300 font-medium mt-1">{currentTrack.artist?.name}</p>
                 {currentTrack.album?.title && (
                   <p className="text-sm text-zinc-400 font-mono mt-0.5">{currentTrack.album.title}</p>
                 )}
               </div>
 
               {/* Large High-Res Visualizer */}
-              <div className="bg-zinc-950/60 border border-zinc-800/80 rounded-2xl p-4">
+              <div
+                className={`rounded-2xl p-4 ${
+                  theme === 'liquid-glass'
+                    ? 'liquid-glass-surface border-white/15'
+                    : 'bg-zinc-950/60 border border-zinc-800/80'
+                }`}
+              >
                 <AudioVisualizer mode={visualizerMode} isPlaying={isPlaying} height={90} />
               </div>
             </div>

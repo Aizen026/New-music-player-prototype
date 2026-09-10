@@ -1,6 +1,6 @@
 import React from 'react';
-import { Play, Pause, Heart, Plus, Disc, Volume2 } from 'lucide-react';
-import { Track } from '../types/monochrome';
+import { Play, Heart, Plus, ListPlus, Disc, Volume2 } from 'lucide-react';
+import { Track, AppTheme } from '../types/monochrome';
 
 interface TrackListProps {
   tracks: Track[];
@@ -13,6 +13,8 @@ interface TrackListProps {
   isFavorite: (trackId: number) => boolean;
   onSelectAlbum?: (albumId: number | string) => void;
   onSelectArtist?: (artistId: number | string) => void;
+  onOpenAddToPlaylist?: (track: Track) => void;
+  theme?: AppTheme;
   emptyMessage?: string;
 }
 
@@ -27,8 +29,12 @@ export const TrackList: React.FC<TrackListProps> = ({
   isFavorite,
   onSelectAlbum,
   onSelectArtist,
+  onOpenAddToPlaylist,
+  theme,
   emptyMessage = 'No tracks found.',
 }) => {
+  const isLiquid = theme === 'liquid-glass';
+  const isLight = theme === 'studio-light';
   const formatDuration = (seconds: number) => {
     if (!seconds || isNaN(seconds)) return '0:00';
     const mins = Math.floor(seconds / 60);
@@ -45,7 +51,7 @@ export const TrackList: React.FC<TrackListProps> = ({
   }
 
   return (
-    <div className="w-full divide-y divide-zinc-800/40">
+    <div className={`w-full divide-y ${isLight ? 'divide-slate-200/70' : 'divide-zinc-800/40'}`}>
       {tracks.map((track, idx) => {
         const isCurrent = currentTrack?.id === track.id;
         const favorited = isFavorite(track.id);
@@ -54,8 +60,18 @@ export const TrackList: React.FC<TrackListProps> = ({
           <div
             key={`${track.id}-${idx}`}
             id={`track-row-${track.id}`}
-            className={`group relative flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors ${
-              isCurrent ? 'bg-zinc-900/90 border border-zinc-800/90' : 'hover:bg-zinc-900/40'
+            className={`group relative flex items-center justify-between px-3 py-2.5 rounded-xl transition-all ${
+              isCurrent
+                ? isLight
+                  ? 'bg-slate-100/90 border border-slate-300 shadow-xs text-slate-900'
+                  : isLiquid
+                  ? 'liquid-glass-elevated border-cyan-400/40 text-white shadow-[0_0_15px_rgba(56,189,248,0.15)]'
+                  : 'bg-zinc-900/90 border border-zinc-800/90 text-white'
+                : isLight
+                ? 'hover:bg-slate-50 text-slate-800'
+                : isLiquid
+                ? 'hover:bg-white/[0.06] text-zinc-200'
+                : 'hover:bg-zinc-900/40 text-zinc-200'
             }`}
           >
             {/* Left: Index / Play Button + Artwork + Title + Artist */}
@@ -189,6 +205,25 @@ export const TrackList: React.FC<TrackListProps> = ({
                 <Heart className={`w-4 h-4 ${favorited ? 'fill-current' : ''}`} />
               </button>
 
+              {/* Add to Playlist Button */}
+              {onOpenAddToPlaylist && (
+                <button
+                  id={`track-playlist-${track.id}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenAddToPlaylist(track);
+                  }}
+                  className={`p-1.5 rounded-lg opacity-60 group-hover:opacity-100 transition-opacity cursor-pointer ${
+                    isLight
+                      ? 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+                      : 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/60'
+                  }`}
+                  title="Add to playlist"
+                >
+                  <ListPlus className="w-4 h-4" />
+                </button>
+              )}
+
               {/* Add to Queue Button */}
               <button
                 id={`track-queue-${track.id}`}
@@ -196,7 +231,11 @@ export const TrackList: React.FC<TrackListProps> = ({
                   e.stopPropagation();
                   onAddToQueue(track);
                 }}
-                className="p-1.5 text-zinc-500 hover:text-zinc-200 rounded-lg hover:bg-zinc-800/60 opacity-60 group-hover:opacity-100 transition-opacity cursor-pointer"
+                className={`p-1.5 rounded-lg opacity-60 group-hover:opacity-100 transition-opacity cursor-pointer ${
+                  isLight
+                    ? 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+                    : 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/60'
+                }`}
                 title="Add to queue"
               >
                 <Plus className="w-4 h-4" />

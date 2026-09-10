@@ -1,6 +1,6 @@
 {
   "name": "Monochrome Audio Player",
-  "description": "High-fidelity music streaming player powered by Monochrome.tf sources with search, queue, visualizer, and album explorer.",
+  "description": "High-fidelity music streaming player with Apple-style Liquid Glass themes, Web Audio equalizer, custom playlists, sleep timer, and Monochrome.tf lossless catalog.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
