@@ -1,0 +1,73 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Replace this step with your actual build/test commands
+      - name: Run Build and Tests
+        run: |
+          echo "Running build..."
+          # Example: npm test, cargo build, etc.
+          # If any command fails (exit code != 0), subsequent steps and jobs will halt.
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code with Tags
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetches full history and existing tags
+
+      - name: Determine Next Version
+        id: bump_version
+        run: |
+          # Fetch latest tag matching v*.* or fallback to v1.0
+          LATEST_TAG=$(git describe --tags --match "v*.*" --abbrev=0 2>/dev/null || echo "")
+
+          if [ -z "$LATEST_TAG" ]; then
+            NEW_TAG="v1.0"
+          else
+            # Strip leading 'v'
+            VERSION="${LATEST_TAG#v}"
+            # Extract major and minor numbers
+            MAJOR=$(echo "$VERSION" | cut -d. -f1)
+            MINOR=$(echo "$VERSION" | cut -d. -f2)
+            
+            # Increment minor version
+            NEW_MINOR=$((MINOR + 1))
+            NEW_TAG="v${MAJOR}.${NEW_MINOR}"
+          fi
+
+          echo "Bumping from '${LATEST_TAG:-none}' to '${NEW_TAG}'"
+          echo "tag=${NEW_TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Create Git Tag and Push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag ${{ steps.bump_version.outputs.tag }}
+          git push origin ${{ steps.bump_version.outputs.tag }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.bump_version.outputs.tag }}
+          name: Release ${{ steps.bump_version.outputs.tag }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
