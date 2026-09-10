@@ -1,0 +1,6 @@
+{
+  "name": "Monochrome Audio Player",
+  "description": "High-fidelity music streaming player powered by Monochrome.tf sources with search, queue, visualizer, and album explorer.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

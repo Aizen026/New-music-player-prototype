@@ -1,0 +1,18 @@
+{
+  "short_name": "Monochrome",
+  "name": "Monochrome Audio Player",
+  "description": "High-fidelity music streaming player powered by Monochrome.tf sources",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "display": "standalone",
+  "orientation": "portrait-primary"
+}
