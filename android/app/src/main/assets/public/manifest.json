@@ -1,18 +1,27 @@
 {
+  "id": "/",
   "short_name": "Monochrome",
   "name": "Monochrome Audio Player",
-  "description": "High-fidelity music streaming player powered by Monochrome.tf sources",
+  "description": "High-fidelity music streaming player with lossless playback and Liquid Glass styling",
   "icons": [
     {
       "src": "/icon.svg",
       "sizes": "192x192 512x512",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
     }
   ],
   "start_url": "/",
+  "scope": "/",
   "background_color": "#09090b",
   "theme_color": "#09090b",
   "display": "standalone",
-  "orientation": "portrait-primary"
+  "orientation": "portrait-primary",
+  "categories": ["music", "entertainment"]
 }
