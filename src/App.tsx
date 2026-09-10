@@ -32,9 +32,21 @@ import {
 } from './types/monochrome';
 import { monochromeApi } from './services/monochromeService';
 import { audioEngine, AudioEngineState } from './services/audioEngine';
+import {
+  CURATED_TRACKS,
+  CURATED_ALBUMS,
+  QUICK_PICKS_TRACKS,
+  TRENDING_TRACKS,
+  RECOMMENDED_TRACKS,
+  COVERS_REMIXES_TRACKS,
+} from './data/defaultTracks';
+import { localMusicService } from './services/localMusicService';
 import { Navbar } from './components/Navbar';
 import { TrackList } from './components/TrackList';
 import { NowPlayingBar } from './components/NowPlayingBar';
+import { QuickPicksSection } from './components/QuickPicksSection';
+import { HorizontalTrackCarousel } from './components/HorizontalTrackCarousel';
+import { AudioVisualizer } from './components/AudioVisualizer';
 import { AlbumModal } from './components/AlbumModal';
 import { ArtistModal } from './components/ArtistModal';
 import { SettingsModal } from './components/SettingsModal';
@@ -48,19 +60,22 @@ import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 
 export default function App() {
   // Navigation & Search State
-  const [activeTab, setActiveTab] = useState<'explore' | 'library' | 'queue'>('explore');
-  const [librarySubTab, setLibrarySubTab] = useState<'favorites' | 'playlists' | 'history'>('favorites');
+  const [activeTab, setActiveTab] = useState<'explore' | 'library' | 'queue' | 'mix' | 'analytics'>('explore');
+  const [librarySubTab, setLibrarySubTab] = useState<'favorites' | 'playlists' | 'device' | 'history'>('favorites');
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchCategory, setSearchCategory] = useState<'all' | 'tracks' | 'albums' | 'artists'>('all');
   const [searchResults, setSearchResults] = useState<SearchResults>({ tracks: [], albums: [], artists: [] });
 
-  // Curated Explore Feed
-  const [featuredHeadline, setFeaturedHeadline] = useState('Monochrome Spotlight');
-  const [featuredTracks, setFeaturedTracks] = useState<Track[]>([]);
-  const [featuredAlbums, setFeaturedAlbums] = useState<AlbumBasic[]>([]);
-  const [loadingFeatured, setLoadingFeatured] = useState(true);
+  // Curated Explore Feed - Preloaded with curated studio tracks so library is never empty
+  const [featuredHeadline, setFeaturedHeadline] = useState('Silly Player Spotlight');
+  const [featuredTracks, setFeaturedTracks] = useState<Track[]>(CURATED_TRACKS);
+  const [featuredAlbums, setFeaturedAlbums] = useState<AlbumBasic[]>(CURATED_ALBUMS);
+  const [loadingFeatured, setLoadingFeatured] = useState(false);
+  const [localTracks, setLocalTracks] = useState<Track[]>([]);
+  const exploreFileInputRef = useRef<HTMLInputElement>(null);
+  const libraryFileInputRef = useRef<HTMLInputElement>(null);
 
   // Queue & Player State
   const [queue, setQueue] = useState<Track[]>([]);
@@ -235,15 +250,19 @@ export default function App() {
       .getFeatured()
       .then((feed) => {
         if (isMounted) {
-          setFeaturedHeadline(feed.featuredHeadline || 'Monochrome Spotlight');
-          setFeaturedTracks(feed.tracks || []);
-          setFeaturedAlbums(feed.albums || []);
+          setFeaturedHeadline(feed.featuredHeadline || 'Silly Player Spotlight');
+          setFeaturedTracks(feed.tracks && feed.tracks.length > 0 ? feed.tracks : CURATED_TRACKS);
+          setFeaturedAlbums(feed.albums && feed.albums.length > 0 ? feed.albums : CURATED_ALBUMS);
           setLoadingFeatured(false);
         }
       })
       .catch((err) => {
         console.error('Failed to load explore feed:', err);
-        if (isMounted) setLoadingFeatured(false);
+        if (isMounted) {
+          setFeaturedTracks(CURATED_TRACKS);
+          setFeaturedAlbums(CURATED_ALBUMS);
+          setLoadingFeatured(false);
+        }
       });
 
     return () => {
@@ -284,13 +303,28 @@ export default function App() {
 
       // Stream track via AudioEngine
       try {
-        const streamUrl = monochromeApi.getStreamUrl(track.id, audioQuality);
+        const streamUrl = monochromeApi.getStreamUrl(track, audioQuality);
         await audioEngine.loadAndPlay(streamUrl);
       } catch (err) {
         console.error('Failed to stream track:', err);
       }
     },
     [audioQuality]
+  );
+
+  // Import local audio files from device
+  const handleImportFiles = useCallback(
+    async (files: FileList | File[]) => {
+      const imported = await localMusicService.importFiles(files);
+      if (imported.length > 0) {
+        setLocalTracks((prev) => [...imported, ...prev]);
+        setLibrarySubTab('device');
+        if (!currentTrack) {
+          playTrack(imported[0], imported, 0);
+        }
+      }
+    },
+    [currentTrack, playTrack]
   );
 
   // Play Next Track
@@ -682,7 +716,7 @@ export default function App() {
       />
 
       {/* Main View Area */}
-      <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-6 pb-32">
+      <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-6 pb-44 md:pb-36">
         {searchQuery.trim() ? (
           /* 1. SEARCH RESULTS VIEW */
           <div id="search-results-view" className="space-y-6">
@@ -872,11 +906,81 @@ export default function App() {
           </div>
         ) : activeTab === 'explore' ? (
           /* 2. CURATED EXPLORE FEED */
-          <div id="explore-view" className="space-y-8">
+          <div id="explore-view" className="space-y-6 sm:space-y-7">
+            {/* 1. Quick Picks: High-density 4-row horizontal scrolling grid */}
+            <QuickPicksSection
+              tracks={QUICK_PICKS_TRACKS}
+              currentTrack={currentTrack}
+              isPlaying={audioState.isPlaying}
+              onPlayTrack={(t, list) => playTrack(t, list)}
+              onTogglePlay={() => (audioState.isPlaying ? audioEngine.pause() : audioEngine.play())}
+              onAddToQueue={addToQueue}
+              onToggleFavorite={toggleFavorite}
+              isFavorite={isFavorite}
+              onStartRadio={(t) => {
+                playTrack(t, [...QUICK_PICKS_TRACKS, ...TRENDING_TRACKS, ...RECOMMENDED_TRACKS]);
+                setIsShuffle(true);
+              }}
+            />
+
+            {/* 2. Trending songs for you */}
+            <HorizontalTrackCarousel
+              id="trending-songs-carousel"
+              title="Trending songs for you"
+              subtitle="GLOBAL & VIRAL CHARTS"
+              tracks={TRENDING_TRACKS}
+              currentTrack={currentTrack}
+              isPlaying={audioState.isPlaying}
+              onPlayTrack={(t, list) => playTrack(t, list)}
+              onTogglePlay={() => (audioState.isPlaying ? audioEngine.pause() : audioEngine.play())}
+              onToggleFavorite={toggleFavorite}
+              isFavorite={isFavorite}
+              onStartRadio={(t) => {
+                playTrack(t, [...TRENDING_TRACKS, ...RECOMMENDED_TRACKS]);
+                setIsShuffle(true);
+              }}
+            />
+
+            {/* 3. Recommended for you */}
+            <HorizontalTrackCarousel
+              id="recommended-songs-carousel"
+              title="Recommended for you"
+              subtitle="BASED ON YOUR TASTE & GENRES"
+              tracks={RECOMMENDED_TRACKS}
+              currentTrack={currentTrack}
+              isPlaying={audioState.isPlaying}
+              onPlayTrack={(t, list) => playTrack(t, list)}
+              onTogglePlay={() => (audioState.isPlaying ? audioEngine.pause() : audioEngine.play())}
+              onToggleFavorite={toggleFavorite}
+              isFavorite={isFavorite}
+              onStartRadio={(t) => {
+                playTrack(t, [...RECOMMENDED_TRACKS, ...QUICK_PICKS_TRACKS]);
+                setIsShuffle(true);
+              }}
+            />
+
+            {/* 4. Covers and remixes */}
+            <HorizontalTrackCarousel
+              id="covers-remixes-carousel"
+              title="Covers and remixes"
+              subtitle="COMMUNITY CUTS & REWORKS"
+              tracks={COVERS_REMIXES_TRACKS}
+              currentTrack={currentTrack}
+              isPlaying={audioState.isPlaying}
+              onPlayTrack={(t, list) => playTrack(t, list)}
+              onTogglePlay={() => (audioState.isPlaying ? audioEngine.pause() : audioEngine.play())}
+              onToggleFavorite={toggleFavorite}
+              isFavorite={isFavorite}
+              onStartRadio={(t) => {
+                playTrack(t, [...COVERS_REMIXES_TRACKS, ...TRENDING_TRACKS]);
+                setIsShuffle(true);
+              }}
+            />
+
             {/* Curated Spotlight Hero Banner */}
             <div
               id="curated-hero"
-              className={`relative overflow-hidden rounded-3xl p-6 sm:p-10 transition-all ${
+              className={`relative overflow-hidden rounded-3xl p-6 sm:p-8 transition-all ${
                 isLiquid
                   ? 'liquid-glass-elevated border-cyan-400/30 shadow-[0_0_30px_rgba(56,189,248,0.2)]'
                   : isLight
@@ -896,12 +1000,11 @@ export default function App() {
                   {featuredHeadline}
                 </h2>
                 <p className="text-xs sm:text-sm text-zinc-300 font-normal leading-relaxed mb-6 max-w-xl">
-                  Stream studio-master audio pulled directly via Monochrome source nodes with zero compression
-                  artifacts, dynamic visualizers, and customized audio EQ.
+                  Hi-Res studio lossless streaming and local device playback with bit-perfect fidelity, 3-band parametric EQ, and Apple Liquid Glass design.
                 </p>
 
-                {featuredTracks.length > 0 && (
-                  <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  {featuredTracks.length > 0 && (
                     <button
                       id="hero-play-all-btn"
                       onClick={() => playAlbumTracks(featuredTracks)}
@@ -910,15 +1013,32 @@ export default function App() {
                       <Play className="w-4 h-4 fill-current ml-0.5" />
                       Play Spotlight ({featuredTracks.length})
                     </button>
-                    <button
-                      onClick={() => setIsThemeModalOpen(true)}
-                      className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-medium text-xs transition-all cursor-pointer"
-                    >
-                      <Palette className="w-3.5 h-3.5 text-cyan-300" />
-                      Switch Theme
-                    </button>
-                  </div>
-                )}
+                  )}
+                  <input
+                    type="file"
+                    ref={exploreFileInputRef}
+                    onChange={(e) => {
+                      if (e.target.files) handleImportFiles(e.target.files);
+                    }}
+                    multiple
+                    accept="audio/*,.mp3,.flac,.wav,.m4a,.aac,.ogg"
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => exploreFileInputRef.current?.click()}
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/40 text-cyan-300 font-medium text-xs transition-all cursor-pointer"
+                  >
+                    <FolderPlus className="w-3.5 h-3.5" />
+                    Import Audio
+                  </button>
+                  <button
+                    onClick={() => setIsThemeModalOpen(true)}
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-medium text-xs transition-all cursor-pointer"
+                  >
+                    <Palette className="w-3.5 h-3.5 text-cyan-300" />
+                    Switch Theme
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -934,13 +1054,13 @@ export default function App() {
                   </h3>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-3.5">
                   {featuredAlbums.map((album) => (
                     <div
                       key={album.id}
                       id={`featured-album-${album.id}`}
                       onClick={() => setSelectedAlbumId(album.id!)}
-                      className={`group p-3 rounded-2xl transition-all cursor-pointer shadow-sm ${
+                      className={`group p-2 sm:p-2.5 rounded-xl transition-all cursor-pointer shadow-sm ${
                         isLiquid
                           ? 'liquid-glass-card hover:scale-[1.02]'
                           : isLight
@@ -948,7 +1068,7 @@ export default function App() {
                           : 'bg-zinc-900/40 border border-zinc-800/80 hover:border-zinc-600 hover:bg-zinc-900/90'
                       }`}
                     >
-                      <div className="relative aspect-square rounded-xl overflow-hidden bg-zinc-800 mb-2.5">
+                      <div className="relative aspect-square rounded-lg overflow-hidden bg-zinc-800 mb-2">
                         {album.cover ? (
                           <img
                             src={album.cover}
@@ -962,13 +1082,13 @@ export default function App() {
                           </div>
                         )}
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                          <Play className="w-6 h-6 fill-white text-white" />
+                          <Play className="w-5 h-5 fill-white text-white" />
                         </div>
                       </div>
-                      <p className={`text-sm font-semibold truncate ${isLight ? 'text-slate-900' : 'text-zinc-200'}`}>
+                      <p className={`text-[13px] font-semibold truncate leading-tight ${isLight ? 'text-slate-900' : 'text-zinc-200'}`}>
                         {album.title}
                       </p>
-                      <p className={`text-xs truncate mt-0.5 ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>
+                      <p className={`text-[11px] truncate mt-0.5 ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>
                         {album.artist}
                       </p>
                       <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400 mt-1">
@@ -1014,6 +1134,198 @@ export default function App() {
                 />
               )}
             </section>
+          </div>
+        ) : activeTab === 'mix' ? (
+          /* 3. INFINITE RADIO MIX VIEW */
+          <div id="mix-view" className="space-y-6">
+            <div className={`p-6 sm:p-8 rounded-3xl border transition-all ${
+              isLiquid ? 'liquid-glass-elevated border-cyan-400/30' : 'bg-zinc-900/60 border-zinc-800'
+            }`}>
+              <span className="text-[11px] uppercase tracking-widest font-mono text-cyan-400 font-semibold block mb-1">
+                LIVE SOUNDSTREAM
+              </span>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+                Infinite Mix Station
+              </h1>
+              <p className="text-xs sm:text-sm text-zinc-400 mt-1 max-w-xl">
+                Continuous non-stop playback curated from your Quick Picks, favorite artists, and trending radio streams.
+              </p>
+
+              <div className="flex flex-wrap items-center gap-3 mt-5">
+                <button
+                  onClick={() => {
+                    const mixList = [...QUICK_PICKS_TRACKS, ...TRENDING_TRACKS, ...COVERS_REMIXES_TRACKS];
+                    playTrack(mixList[Math.floor(Math.random() * mixList.length)], mixList);
+                    setIsShuffle(true);
+                  }}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-white text-zinc-950 font-bold text-xs hover:bg-zinc-200 transition-all cursor-pointer shadow-lg"
+                >
+                  <Radio className="w-4 h-4 text-zinc-950" />
+                  Start Dynamic Radio
+                </button>
+
+                <button
+                  onClick={() => {
+                    playTrack(TRENDING_TRACKS[0], TRENDING_TRACKS);
+                    setIsShuffle(true);
+                  }}
+                  className="px-4 py-2.5 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-xs font-semibold text-zinc-200 border border-zinc-700/60 transition-colors cursor-pointer"
+                >
+                  Trending Mix
+                </button>
+
+                <button
+                  onClick={() => {
+                    playTrack(COVERS_REMIXES_TRACKS[0], COVERS_REMIXES_TRACKS);
+                    setIsShuffle(true);
+                  }}
+                  className="px-4 py-2.5 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-xs font-semibold text-zinc-200 border border-zinc-700/60 transition-colors cursor-pointer"
+                >
+                  Lo-Fi & Remixes
+                </button>
+              </div>
+            </div>
+
+            {/* Quick picks within mix */}
+            <QuickPicksSection
+              tracks={QUICK_PICKS_TRACKS}
+              currentTrack={currentTrack}
+              isPlaying={audioState.isPlaying}
+              onPlayTrack={(t, list) => playTrack(t, list)}
+              onTogglePlay={() => (audioState.isPlaying ? audioEngine.pause() : audioEngine.play())}
+              onAddToQueue={addToQueue}
+              onToggleFavorite={toggleFavorite}
+              isFavorite={isFavorite}
+              onStartRadio={(t) => {
+                playTrack(t, [...QUICK_PICKS_TRACKS, ...TRENDING_TRACKS]);
+                setIsShuffle(true);
+              }}
+            />
+
+            {/* Full mix catalog */}
+            <section className="space-y-3">
+              <h2 className="text-xl font-bold text-white tracking-tight">Queued Radio Recommendations</h2>
+              <TrackList
+                tracks={[...TRENDING_TRACKS, ...COVERS_REMIXES_TRACKS]}
+                currentTrack={currentTrack}
+                isPlaying={audioState.isPlaying}
+                onPlayTrack={(t) => playTrack(t, [...TRENDING_TRACKS, ...COVERS_REMIXES_TRACKS])}
+                onTogglePlay={() => (audioState.isPlaying ? audioEngine.pause() : audioEngine.play())}
+                onAddToQueue={addToQueue}
+                onToggleFavorite={toggleFavorite}
+                isFavorite={isFavorite}
+                onSelectAlbum={setSelectedAlbumId}
+                onSelectArtist={setSelectedArtistId}
+                onOpenAddToPlaylist={openAddToPlaylist}
+                theme={theme}
+              />
+            </section>
+          </div>
+        ) : activeTab === 'analytics' ? (
+          /* 4. ANALYTICS & EQUALIZER VIEW */
+          <div id="analytics-view" className="space-y-6">
+            <div className={`p-6 sm:p-8 rounded-3xl border transition-all ${
+              isLiquid ? 'liquid-glass-elevated border-cyan-400/30' : 'bg-zinc-900/60 border-zinc-800'
+            }`}>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <span className="text-[11px] uppercase tracking-widest font-mono text-emerald-400 font-semibold block mb-1">
+                    STUDIO AUDIO ENGINE
+                  </span>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+                    Audio FX & Parametric EQ
+                  </h1>
+                  <p className="text-xs sm:text-sm text-zinc-400 mt-1 max-w-xl">
+                    Real-time parametric equalization, Web Audio spectrum visualizer, and live node latency monitor.
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => setIsSettingsOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-mono text-zinc-200 border border-zinc-700 cursor-pointer self-start sm:self-auto"
+                >
+                  <SlidersHorizontal className="w-4 h-4 text-cyan-400" />
+                  Live Latency Settings
+                </button>
+              </div>
+
+              {/* Spectrum Visualizer Canvas */}
+              <div className="mt-6 p-4 rounded-2xl bg-zinc-950/80 border border-zinc-800/80">
+                <div className="flex items-center justify-between mb-3 text-xs font-mono text-zinc-400">
+                  <span className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                    Spectrum Visualizer ({visualizerMode.toUpperCase()})
+                  </span>
+                  <div className="flex gap-1">
+                    {(['bars', 'wave', 'glow'] as VisualizerMode[]).map((m) => (
+                      <button
+                        key={m}
+                        onClick={() => setVisualizerMode(m)}
+                        className={`px-2 py-0.5 rounded text-[10px] uppercase font-mono ${
+                          visualizerMode === m ? 'bg-cyan-500 text-zinc-950 font-bold' : 'text-zinc-500 hover:text-zinc-300'
+                        }`}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="h-28 w-full">
+                  <AudioVisualizer mode={visualizerMode} isPlaying={audioState.isPlaying} height={112} />
+                </div>
+              </div>
+
+              {/* 3-Band Parametric Equalizer Sliders */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+                <div className="p-4 rounded-2xl bg-zinc-950/60 border border-zinc-800/70 space-y-2">
+                  <div className="flex justify-between text-xs font-mono">
+                    <span className="text-zinc-300 font-bold">Bass (100Hz)</span>
+                    <span className="text-cyan-400">{currentEQ.low > 0 ? `+${currentEQ.low}` : currentEQ.low} dB</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={-12}
+                    max={12}
+                    step={1}
+                    value={currentEQ.low}
+                    onChange={(e) => handleEQChange({ ...currentEQ, low: parseFloat(e.target.value) })}
+                    className="w-full accent-cyan-400 cursor-pointer"
+                  />
+                </div>
+
+                <div className="p-4 rounded-2xl bg-zinc-950/60 border border-zinc-800/70 space-y-2">
+                  <div className="flex justify-between text-xs font-mono">
+                    <span className="text-zinc-300 font-bold">Mids (1kHz)</span>
+                    <span className="text-cyan-400">{currentEQ.mid > 0 ? `+${currentEQ.mid}` : currentEQ.mid} dB</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={-12}
+                    max={12}
+                    step={1}
+                    value={currentEQ.mid}
+                    onChange={(e) => handleEQChange({ ...currentEQ, mid: parseFloat(e.target.value) })}
+                    className="w-full accent-cyan-400 cursor-pointer"
+                  />
+                </div>
+
+                <div className="p-4 rounded-2xl bg-zinc-950/60 border border-zinc-800/70 space-y-2">
+                  <div className="flex justify-between text-xs font-mono">
+                    <span className="text-zinc-300 font-bold">Treble (10kHz)</span>
+                    <span className="text-cyan-400">{currentEQ.high > 0 ? `+${currentEQ.high}` : currentEQ.high} dB</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={-12}
+                    max={12}
+                    step={1}
+                    value={currentEQ.high}
+                    onChange={(e) => handleEQChange({ ...currentEQ, high: parseFloat(e.target.value) })}
+                    className="w-full accent-cyan-400 cursor-pointer"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         ) : activeTab === 'library' ? (
           /* 3. MY LIBRARY / PLAYLISTS / FAVORITES VIEW */
@@ -1080,6 +1392,27 @@ export default function App() {
                 >
                   <ListMusic className="w-3.5 h-3.5 text-cyan-400" />
                   Playlists ({playlists.length})
+                </button>
+
+                <button
+                  onClick={() => {
+                    setLibrarySubTab('device');
+                    setSelectedPlaylistId(null);
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                    librarySubTab === 'device' && !selectedPlaylistId
+                      ? isLight
+                        ? 'bg-slate-900 text-white font-bold'
+                        : isLiquid
+                        ? 'bg-white/30 text-white shadow-inner font-bold'
+                        : 'bg-zinc-100 text-zinc-950 font-bold'
+                      : isLight
+                      ? 'text-slate-600 hover:text-slate-900'
+                      : 'text-zinc-400 hover:text-zinc-200'
+                  }`}
+                >
+                  <FolderPlus className="w-3.5 h-3.5 text-emerald-400" />
+                  Device Songs ({localTracks.length})
                 </button>
 
                 <button
@@ -1287,6 +1620,73 @@ export default function App() {
                   emptyMessage="No favorites yet. Click the heart icon on any song to save it to your library."
                 />
               </div>
+            ) : librarySubTab === 'device' ? (
+              /* Device Songs View */
+              <div className="space-y-4">
+                <div
+                  className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl border ${
+                    isLiquid
+                      ? 'liquid-glass-card'
+                      : isLight
+                      ? 'bg-white border-slate-200 shadow-sm'
+                      : 'bg-zinc-900/60 border-zinc-800'
+                  }`}
+                >
+                  <div>
+                    <h3 className={`text-base font-bold flex items-center gap-2 ${isLight ? 'text-slate-900' : 'text-zinc-100'}`}>
+                      <FolderPlus className="w-4 h-4 text-emerald-400" />
+                      Local Device Music
+                    </h3>
+                    <p className={`text-xs mt-1 ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>
+                      Import your MP3, FLAC, WAV, or M4A audio files from your phone or device to play offline anytime.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <input
+                      type="file"
+                      ref={libraryFileInputRef}
+                      onChange={(e) => {
+                        if (e.target.files) handleImportFiles(e.target.files);
+                      }}
+                      multiple
+                      accept="audio/*,.mp3,.flac,.wav,.m4a,.aac,.ogg"
+                      className="hidden"
+                    />
+                    <button
+                      onClick={() => libraryFileInputRef.current?.click()}
+                      className="px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-zinc-950 font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Import Audio Files
+                    </button>
+                    {localTracks.length > 0 && (
+                      <button
+                        onClick={() => playAlbumTracks(localTracks)}
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-100 text-zinc-950 font-bold hover:bg-white transition-all text-xs cursor-pointer shadow"
+                      >
+                        <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                        Play All ({localTracks.length})
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <TrackList
+                  tracks={localTracks}
+                  currentTrack={currentTrack}
+                  isPlaying={audioState.isPlaying}
+                  onPlayTrack={(t) => playTrack(t, localTracks)}
+                  onTogglePlay={() => (audioState.isPlaying ? audioEngine.pause() : audioEngine.play())}
+                  onAddToQueue={addToQueue}
+                  onToggleFavorite={toggleFavorite}
+                  isFavorite={isFavorite}
+                  onSelectAlbum={setSelectedAlbumId}
+                  onSelectArtist={setSelectedArtistId}
+                  onOpenAddToPlaylist={openAddToPlaylist}
+                  theme={theme}
+                  emptyMessage="No device songs loaded yet. Tap 'Import Audio Files' above to load music from your device."
+                />
+              </div>
             ) : (
               /* History View */
               <div className="space-y-4">
@@ -1489,6 +1889,7 @@ export default function App() {
         onQualityChange={setAudioQuality}
         visualizerMode={visualizerMode}
         onVisualizerChange={setVisualizerMode}
+        onImportFiles={handleImportFiles}
       />
 
       {/* Queue Drawer */}

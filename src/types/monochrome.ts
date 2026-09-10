@@ -16,7 +16,7 @@ export interface AlbumBasic {
 }
 
 export interface Track {
-  id: number;
+  id: number | string;
   title: string;
   version?: string | null;
   duration: number; // in seconds
@@ -27,17 +27,20 @@ export interface Track {
   audioQuality?: string;
   isrc?: string | null;
   popularity?: number;
+  streamUrl?: string;
+  isLocal?: boolean;
+  explicit?: boolean;
 }
 
 export interface AlbumDetail extends AlbumBasic {
-  id: number;
+  id: number | string;
   artist: string;
-  artistId?: number;
+  artistId?: number | string;
   tracks?: Track[];
 }
 
 export interface ArtistDetail {
-  id: number;
+  id: number | string;
   name: string;
   picture: string;
   pictureLarge?: string;

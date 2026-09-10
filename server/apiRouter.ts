@@ -52,15 +52,23 @@ export function formatCoverUrl(coverId: string | null | undefined, size = '320')
 
 export const apiRouter = Router();
 
-// 1. Health & Instances
+// 1. Health & Ping
+apiRouter.get('/ping', (_req: Request, res: Response) => {
+  res.json({
+    status: 'ok',
+    timestamp: Date.now(),
+    serverTime: new Date().toISOString(),
+  });
+});
+
 apiRouter.get('/instances', async (_req: Request, res: Response) => {
   const instances = [
     {
-      name: 'Monochrome HiFi (Direct Engine)',
+      name: 'Silly Player HiFi (Direct Engine)',
       url: 'https://api.tidal.com',
       status: 'online',
       type: 'official-client',
-      notes: 'High-res 320kbps AAC streaming with official Monochrome API credentials',
+      notes: 'High-res 320kbps AAC streaming with official HiFi audio engine',
       official: true,
     },
     {
@@ -99,7 +107,7 @@ apiRouter.get('/instances', async (_req: Request, res: Response) => {
 
   res.json({
     success: true,
-    activeInstance: 'Monochrome HiFi (Direct Engine)',
+    activeInstance: 'Silly Player HiFi (Direct Engine)',
     instances,
   });
 });

@@ -11,15 +11,17 @@ import {
   Moon,
   SlidersHorizontal,
   Keyboard,
-  Clock
+  Clock,
+  Radio,
+  Sparkles
 } from 'lucide-react';
 import { QualityTier, AppTheme } from '../types/monochrome';
 
 interface NavbarProps {
   searchQuery: string;
   onSearchChange: (q: string) => void;
-  activeTab: 'explore' | 'library' | 'queue';
-  onTabChange: (tab: 'explore' | 'library' | 'queue') => void;
+  activeTab: 'explore' | 'library' | 'queue' | 'mix' | 'analytics';
+  onTabChange: (tab: 'explore' | 'library' | 'queue' | 'mix' | 'analytics') => void;
   onOpenSettings: () => void;
   audioQuality: QualityTier;
   onQualityChange: (q: QualityTier) => void;
@@ -66,7 +68,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header
       id="app-header"
-      className={`sticky top-0 z-40 w-full px-4 lg:px-8 py-3 transition-all ${
+      className={`sticky top-0 z-40 w-full px-4 lg:px-8 safe-top-nav pb-3 transition-all ${
         isLiquid
           ? 'liquid-glass-surface'
           : isLight
@@ -103,7 +105,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     isLight ? 'text-slate-900' : 'text-zinc-100'
                   }`}
                 >
-                  Monochrome
+                  Silly Player
                 </span>
                 <span
                   className={`text-[10px] uppercase font-mono px-1.5 py-0.5 rounded ${
@@ -114,7 +116,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       : 'bg-zinc-800/90 text-zinc-300 border border-zinc-700/60'
                   }`}
                 >
-                  {isLiquid ? 'Liquid Glass' : '.tf Source'}
+                  Hi-Fi Audio
                 </span>
               </div>
               <p
@@ -123,7 +125,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }`}
               >
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                HiFi Stream Ready
+                Hi-Res Audio Engine
               </p>
             </div>
           </button>
@@ -184,7 +186,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Search tracks, artists, albums (Monochrome / Tidal catalog)..."
+              placeholder="Search songs, artists, albums, or local library..."
               className={`w-full rounded-xl pl-10 pr-9 py-2 text-sm transition-all font-sans focus:outline-none ${
                 isLiquid
                   ? 'liquid-glass-input text-white placeholder-zinc-400 focus:border-cyan-400/80 focus:ring-1 focus:ring-cyan-400/30'
@@ -206,57 +208,128 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* Navigation Tabs & Player Controls */}
-        <div className="flex items-center gap-2 w-full md:w-auto justify-between md:justify-end overflow-x-auto pb-1 md:pb-0">
-          <div
-            className={`flex items-center p-1 rounded-xl gap-1 text-xs ${
+        {/* Studio Audio Channel Selectors */}
+        <div className="flex items-center gap-2 w-full md:w-auto justify-between md:justify-end overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+          <nav
+            aria-label="Studio Channels"
+            className={`flex items-center p-1 rounded-xl gap-1 text-xs border ${
               isLiquid
-                ? 'liquid-glass-pill'
+                ? 'liquid-glass-elevated border-white/20'
                 : isLight
-                ? 'bg-slate-100 border border-slate-200'
-                : 'bg-zinc-900/80 border border-zinc-800/80'
+                ? 'bg-slate-100/90 border-slate-200/90 shadow-sm'
+                : 'bg-zinc-950/90 border-zinc-800/80 shadow-inner'
             }`}
           >
+            {/* 1. Explore Tab */}
             <button
               id="tab-explore-btn"
               onClick={() => onTabChange('explore')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
+              className={`group relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-tight transition-all cursor-pointer select-none active:scale-[0.97] ${
                 activeTab === 'explore'
                   ? isLight
-                    ? 'bg-slate-900 text-white shadow-sm'
+                    ? 'bg-white text-slate-900 shadow-sm border border-slate-300'
                     : isLiquid
-                    ? 'bg-white/30 text-white border border-white/40 shadow-inner'
-                    : 'bg-zinc-100 text-zinc-950 shadow-sm'
+                    ? 'bg-white/25 text-white border border-white/40 shadow-inner'
+                    : 'bg-zinc-800 text-white shadow-sm border border-zinc-700/80 ring-1 ring-cyan-400/20'
                   : isLight
-                  ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
+                  ? 'text-slate-600 hover:text-slate-950 hover:bg-slate-200/60'
+                  : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900'
               }`}
             >
+              <span
+                className={`w-1.5 h-1.5 rounded-full transition-all ${
+                  activeTab === 'explore'
+                    ? 'bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.9)] animate-pulse'
+                    : 'bg-zinc-600 group-hover:bg-zinc-400'
+                }`}
+              />
               <Music className="w-3.5 h-3.5" />
               <span>Explore</span>
             </button>
 
+            {/* 2. Live Radio Mix Tab */}
+            <button
+              id="tab-mix-btn"
+              onClick={() => onTabChange('mix')}
+              className={`group relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-tight transition-all cursor-pointer select-none active:scale-[0.97] ${
+                activeTab === 'mix'
+                  ? isLight
+                    ? 'bg-white text-slate-900 shadow-sm border border-slate-300'
+                    : isLiquid
+                    ? 'bg-white/25 text-white border border-white/40 shadow-inner'
+                    : 'bg-zinc-800 text-white shadow-sm border border-zinc-700/80 ring-1 ring-cyan-400/20'
+                  : isLight
+                  ? 'text-slate-600 hover:text-slate-950 hover:bg-slate-200/60'
+                  : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900'
+              }`}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full transition-all ${
+                  activeTab === 'mix'
+                    ? 'bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.9)] animate-pulse'
+                    : 'bg-zinc-600 group-hover:bg-zinc-400'
+                }`}
+              />
+              <Radio className="w-3.5 h-3.5" />
+              <span>Radio Mix</span>
+            </button>
+
+            {/* 3. Studio FX / Parametric EQ */}
+            <button
+              id="tab-analytics-btn"
+              onClick={() => onTabChange('analytics')}
+              className={`group relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-tight transition-all cursor-pointer select-none active:scale-[0.97] ${
+                activeTab === 'analytics'
+                  ? isLight
+                    ? 'bg-white text-slate-900 shadow-sm border border-slate-300'
+                    : isLiquid
+                    ? 'bg-white/25 text-white border border-white/40 shadow-inner'
+                    : 'bg-zinc-800 text-white shadow-sm border border-zinc-700/80 ring-1 ring-cyan-400/20'
+                  : isLight
+                  ? 'text-slate-600 hover:text-slate-950 hover:bg-slate-200/60'
+                  : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900'
+              }`}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full transition-all ${
+                  activeTab === 'analytics'
+                    ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)] animate-pulse'
+                    : 'bg-zinc-600 group-hover:bg-zinc-400'
+                }`}
+              />
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span>Studio FX</span>
+            </button>
+
+            {/* 4. Library Tab */}
             <button
               id="tab-library-btn"
               onClick={() => onTabChange('library')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
+              className={`group relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-tight transition-all cursor-pointer select-none active:scale-[0.97] ${
                 activeTab === 'library'
                   ? isLight
-                    ? 'bg-slate-900 text-white shadow-sm'
+                    ? 'bg-white text-slate-900 shadow-sm border border-slate-300'
                     : isLiquid
-                    ? 'bg-white/30 text-white border border-white/40 shadow-inner'
-                    : 'bg-zinc-100 text-zinc-950 shadow-sm'
+                    ? 'bg-white/25 text-white border border-white/40 shadow-inner'
+                    : 'bg-zinc-800 text-white shadow-sm border border-zinc-700/80 ring-1 ring-cyan-400/20'
                   : isLight
-                  ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
+                  ? 'text-slate-600 hover:text-slate-950 hover:bg-slate-200/60'
+                  : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900'
               }`}
             >
+              <span
+                className={`w-1.5 h-1.5 rounded-full transition-all ${
+                  activeTab === 'library'
+                    ? 'bg-rose-400 shadow-[0_0_8px_rgba(251,113,133,0.9)] animate-pulse'
+                    : 'bg-zinc-600 group-hover:bg-zinc-400'
+                }`}
+              />
               <Heart className="w-3.5 h-3.5" />
               <span>Library</span>
               {favoritesCount > 0 && (
                 <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ml-0.5 ${
-                    isLight ? 'bg-slate-200 text-slate-800' : 'bg-zinc-800 text-zinc-300'
+                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ml-0.5 font-bold ${
+                    isLight ? 'bg-slate-200 text-slate-800' : 'bg-zinc-900 text-cyan-300 border border-zinc-700/60'
                   }`}
                 >
                   {favoritesCount}
@@ -264,51 +337,59 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </button>
 
+            {/* 5. Queue Tab */}
             <button
               id="tab-queue-btn"
               onClick={() => onTabChange('queue')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
+              className={`group relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-tight transition-all cursor-pointer select-none active:scale-[0.97] ${
                 activeTab === 'queue'
                   ? isLight
-                    ? 'bg-slate-900 text-white shadow-sm'
+                    ? 'bg-white text-slate-900 shadow-sm border border-slate-300'
                     : isLiquid
-                    ? 'bg-white/30 text-white border border-white/40 shadow-inner'
-                    : 'bg-zinc-100 text-zinc-950 shadow-sm'
+                    ? 'bg-white/25 text-white border border-white/40 shadow-inner'
+                    : 'bg-zinc-800 text-white shadow-sm border border-zinc-700/80 ring-1 ring-cyan-400/20'
                   : isLight
-                  ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
+                  ? 'text-slate-600 hover:text-slate-950 hover:bg-slate-200/60'
+                  : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900'
               }`}
             >
+              <span
+                className={`w-1.5 h-1.5 rounded-full transition-all ${
+                  activeTab === 'queue'
+                    ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.9)] animate-pulse'
+                    : 'bg-zinc-600 group-hover:bg-zinc-400'
+                }`}
+              />
               <ListMusic className="w-3.5 h-3.5" />
               <span>Queue</span>
               {queueCount > 0 && (
                 <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ml-0.5 ${
-                    isLight ? 'bg-slate-200 text-slate-800' : 'bg-zinc-800 text-zinc-300'
+                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ml-0.5 font-bold ${
+                    isLight ? 'bg-slate-200 text-slate-800' : 'bg-zinc-900 text-amber-300 border border-zinc-700/60'
                   }`}
                 >
                   {queueCount}
                 </span>
               )}
             </button>
-          </div>
+          </nav>
 
           {/* Sleep Timer Indicator Button */}
           <button
             id="sleep-timer-nav-btn"
             onClick={onOpenSleepTimerModal}
             title={sleepTimerMode ? 'Sleep timer active' : 'Set sleep timer'}
-            className={`hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-mono transition-all cursor-pointer ${
+            className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-mono transition-all cursor-pointer border select-none active:scale-95 ${
               sleepTimerMode
-                ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 animate-pulse'
+                ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/50 shadow-[0_0_10px_rgba(99,102,241,0.3)] animate-pulse'
                 : isLiquid
-                ? 'liquid-glass-pill text-zinc-300 hover:text-white'
+                ? 'liquid-glass-elevated border-white/20 text-zinc-200 hover:text-white'
                 : isLight
-                ? 'bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200'
-                : 'bg-zinc-900 border border-zinc-800 text-zinc-300 hover:border-zinc-600'
+                ? 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+                : 'bg-zinc-900/90 border-zinc-800 text-zinc-300 hover:border-zinc-700 hover:text-white'
             }`}
           >
-            <Moon className="w-3.5 h-3.5" />
+            <Moon className="w-3.5 h-3.5 text-indigo-400" />
             {sleepTimerRemaining !== null ? (
               <span className="font-bold">{formatTimer(sleepTimerRemaining)}</span>
             ) : sleepTimerMode === 'track' ? (
@@ -316,20 +397,20 @@ export const Navbar: React.FC<NavbarProps> = ({
             ) : null}
           </button>
 
-          {/* Equalizer Button */}
+          {/* Equalizer Quick Button */}
           <button
             id="eq-nav-btn"
             onClick={onOpenEQModal}
             title="Audio Equalizer (Web Audio FX)"
-            className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+            className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer border select-none active:scale-95 ${
               isLiquid
-                ? 'liquid-glass-pill text-zinc-200 hover:text-white'
+                ? 'liquid-glass-elevated border-white/20 text-zinc-200 hover:text-white'
                 : isLight
-                ? 'bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200'
-                : 'bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700'
+                ? 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+                : 'bg-zinc-900/90 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700'
             }`}
           >
-            <SlidersHorizontal className="w-3.5 h-3.5" />
+            <SlidersHorizontal className="w-3.5 h-3.5 text-cyan-400" />
             <span className="hidden lg:inline">EQ</span>
           </button>
 
@@ -338,48 +419,56 @@ export const Navbar: React.FC<NavbarProps> = ({
             id="theme-switcher-nav-btn"
             onClick={onOpenThemeModal}
             title="Customize Appearance & Themes (Apple Liquid Glass, Dark, Light)"
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer border select-none active:scale-95 ${
               isLiquid
                 ? 'liquid-glass-elevated text-cyan-300 border-cyan-400/40 shadow-[0_0_12px_rgba(56,189,248,0.25)]'
                 : isLight
-                ? 'bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200'
-                : 'bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700'
+                ? 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+                : 'bg-zinc-900/90 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700'
             }`}
           >
             <Palette className="w-3.5 h-3.5 text-cyan-400" />
             <span className="hidden xl:inline">Theme</span>
           </button>
 
-          {/* Audio Quality Badge / Selector */}
+          {/* Audio Quality Master Indicator */}
           <button
             id="quality-selector-btn"
             onClick={() => {
               const next: QualityTier = audioQuality === 'HIGH' ? 'LOSSLESS' : 'HIGH';
               onQualityChange(next);
             }}
-            title="Toggle Stream Quality"
-            className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-mono cursor-pointer transition-colors ${
+            title="Toggle Stream Bitrate / Quality"
+            className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-mono font-medium cursor-pointer transition-all border select-none active:scale-95 ${
               isLiquid
-                ? 'liquid-glass-pill text-zinc-200'
+                ? 'liquid-glass-elevated border-white/20 text-zinc-200'
                 : isLight
-                ? 'bg-slate-100 border border-slate-200 text-slate-700 hover:border-slate-300'
-                : 'bg-zinc-900 border border-zinc-800 text-zinc-300 hover:border-zinc-600'
+                ? 'bg-slate-100 border-slate-200 text-slate-700 hover:border-slate-300'
+                : 'bg-zinc-900/90 border-zinc-800 text-zinc-300 hover:border-zinc-700'
             }`}
           >
-            <span className={`w-1.5 h-1.5 rounded-full ${isStreaming ? 'bg-cyan-400' : 'bg-zinc-500'}`} />
-            <span>{audioQuality === 'HIGH' ? '320K AAC' : 'LOSSLESS'}</span>
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                isStreaming
+                  ? 'bg-cyan-400 shadow-[0_0_6px_rgba(6,182,212,0.9)] animate-pulse'
+                  : 'bg-zinc-500'
+              }`}
+            />
+            <span className="font-semibold tracking-wider text-[11px]">
+              {audioQuality === 'HIGH' ? '320K AAC' : 'LOSSLESS'}
+            </span>
           </button>
 
           {/* Keyboard Shortcuts Trigger */}
           <button
             id="shortcuts-btn"
             onClick={onOpenShortcutsModal}
-            className={`hidden xl:flex items-center justify-center p-2 rounded-lg transition-colors cursor-pointer ${
+            className={`hidden xl:flex items-center justify-center p-2 rounded-lg transition-all border cursor-pointer select-none active:scale-95 ${
               isLiquid
-                ? 'liquid-glass-pill text-zinc-300 hover:text-white'
+                ? 'liquid-glass-elevated border-white/20 text-zinc-300 hover:text-white'
                 : isLight
-                ? 'bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900'
-                : 'bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700'
+                ? 'bg-slate-100 border-slate-200 text-slate-600 hover:text-slate-900'
+                : 'bg-zinc-900/90 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700'
             }`}
             title="Desktop Hotkeys & Keyboard Shortcuts"
           >
@@ -390,12 +479,12 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             id="open-settings-btn"
             onClick={onOpenSettings}
-            className={`hidden md:flex items-center justify-center p-2 rounded-lg transition-colors cursor-pointer ${
+            className={`hidden md:flex items-center justify-center p-2 rounded-lg transition-all border cursor-pointer select-none active:scale-95 ${
               isLiquid
-                ? 'liquid-glass-pill text-zinc-300 hover:text-white'
+                ? 'liquid-glass-elevated border-white/20 text-zinc-300 hover:text-white'
                 : isLight
-                ? 'bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900'
-                : 'bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700'
+                ? 'bg-slate-100 border-slate-200 text-slate-600 hover:text-slate-900'
+                : 'bg-zinc-900/90 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700'
             }`}
             title="Monochrome Gateway & Instance Settings"
           >

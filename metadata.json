@@ -1,6 +1,6 @@
 {
-  "name": "Monochrome Audio Player",
-  "description": "High-fidelity music streaming player with Apple-style Liquid Glass themes, Web Audio equalizer, custom playlists, sleep timer, and Monochrome.tf lossless catalog.",
+  "name": "Silly Player",
+  "description": "High-fidelity music player with Apple-style Liquid Glass themes, Web Audio equalizer, local audio file importer, custom playlists, sleep timer, and lossless streaming.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

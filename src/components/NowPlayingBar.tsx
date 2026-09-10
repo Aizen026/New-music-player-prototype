@@ -101,31 +101,18 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   if (!currentTrack) {
-    return (
-      <div
-        id="now-playing-bar-empty"
-        className={`fixed bottom-0 left-0 right-0 z-40 px-4 py-3 text-center text-xs font-mono transition-all ${
-          isLiquid
-            ? 'liquid-glass-surface text-zinc-300'
-            : isLight
-            ? 'bg-white/90 border-t border-slate-200 text-slate-500'
-            : 'bg-[#0d0e12]/95 backdrop-blur-md border-t border-zinc-800/80 text-zinc-500'
-        }`}
-      >
-        Select any track to begin lossless streaming via Monochrome.tf source
-      </div>
-    );
+    return null;
   }
 
   return (
     <div
       id="now-playing-bar"
-      className={`fixed bottom-0 left-0 right-0 z-40 shadow-2xl transition-all ${
+      className={`fixed bottom-2.5 sm:bottom-3.5 left-2 right-2 sm:left-4 sm:right-4 md:left-1/2 md:-translate-x-1/2 md:max-w-4xl z-40 shadow-[0_16px_48px_rgba(0,0,0,0.65)] rounded-2xl overflow-hidden border transition-all ${
         isLiquid
-          ? 'liquid-glass-elevated text-white'
+          ? 'liquid-glass-elevated text-white border-white/20'
           : isLight
-          ? 'bg-white/95 backdrop-blur-xl border-t border-slate-200/90 text-slate-900'
-          : 'bg-[#0b0c10]/95 backdrop-blur-xl border-t border-zinc-800/90'
+          ? 'bg-white/95 backdrop-blur-xl border-slate-200/90 text-slate-900 shadow-slate-300/40'
+          : 'bg-[#0e0f14]/95 backdrop-blur-2xl border-white/10 text-white'
       }`}
     >
       {/* Top progress scrub bar */}
@@ -157,9 +144,86 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
         />
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-2.5 flex flex-col md:flex-row items-center justify-between gap-3">
+      {/* Mobile Mini Player Layout */}
+      <div className="flex md:hidden items-center justify-between gap-3 px-3 py-2">
+        <div
+          onClick={onOpenFullscreen}
+          className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer"
+        >
+          <div className="relative w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-zinc-800 shadow">
+            {currentTrack.album?.cover ? (
+              <img
+                src={currentTrack.album.cover}
+                alt={currentTrack.title}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-zinc-500">
+                <Disc className="w-5 h-5" />
+              </div>
+            )}
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <p className="text-xs font-bold text-zinc-100 truncate">{currentTrack.title}</p>
+              {currentTrack.explicit && (
+                <span className="shrink-0 text-[9px] font-bold px-1 py-0.2 rounded bg-zinc-700 text-zinc-300">
+                  E
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-zinc-400 truncate">{currentTrack.artist?.name}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            onClick={onToggleFavorite}
+            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+              isFavorite ? 'text-rose-400' : 'text-zinc-400 hover:text-white'
+            }`}
+            title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+          >
+            <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
+          </button>
+
+          <button
+            onClick={onTogglePlay}
+            className="w-8 h-8 rounded-full bg-white text-zinc-950 flex items-center justify-center shadow-md cursor-pointer active:scale-95"
+            title={isPlaying ? 'Pause' : 'Play'}
+          >
+            {isLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin text-current" />
+            ) : isPlaying ? (
+              <Pause className="w-4 h-4 fill-current" />
+            ) : (
+              <Play className="w-4 h-4 fill-current ml-0.5" />
+            )}
+          </button>
+
+          <button
+            onClick={onNext}
+            className="p-1.5 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+            title="Next track"
+          >
+            <SkipForward className="w-4 h-4 fill-current" />
+          </button>
+
+          <button
+            onClick={onOpenFullscreen}
+            className="p-1.5 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+            title="Full Screen / Lyrics"
+          >
+            <Maximize2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Desktop Rich Controls Layout */}
+      <div className="hidden md:flex max-w-7xl mx-auto px-4 py-2.5 items-center justify-between gap-3">
         {/* Track Metadata & Artwork */}
-        <div className="flex items-center gap-3 w-full md:w-1/3 min-w-0">
+        <div className="flex items-center gap-3 w-1/3 min-w-0">
           <div
             id="now-playing-cover"
             onClick={onOpenFullscreen}
@@ -265,82 +329,97 @@ export const NowPlayingBar: React.FC<NowPlayingBarProps> = ({
               {playbackRate}x
             </button>
 
-            {/* Shuffle */}
+            {/* Shuffle Toggle */}
             <button
               id="player-shuffle-btn"
               onClick={onToggleShuffle}
-              className={`p-1.5 rounded-md transition-colors cursor-pointer ${
+              className={`relative p-1.5 rounded-lg border transition-all cursor-pointer active:scale-90 ${
                 isShuffle
-                  ? 'text-cyan-400'
+                  ? 'bg-cyan-500/15 border-cyan-400/50 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.3)]'
                   : isLight
-                  ? 'text-slate-400 hover:text-slate-700'
-                  : 'text-zinc-500 hover:text-zinc-300'
+                  ? 'bg-slate-100 border-slate-200 text-slate-500 hover:text-slate-800'
+                  : 'bg-zinc-900/80 border-zinc-800 text-zinc-400 hover:text-zinc-200'
               }`}
-              title="Shuffle queue"
+              title={isShuffle ? 'Shuffle enabled' : 'Enable shuffle'}
             >
               <Shuffle className="w-3.5 h-3.5" />
+              {isShuffle && (
+                <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_4px_rgba(6,182,212,0.9)]" />
+              )}
             </button>
 
-            {/* Previous */}
+            {/* Previous Track */}
             <button
               id="player-prev-btn"
               onClick={onPrevious}
-              className={`p-1.5 transition-colors cursor-pointer ${
-                isLight ? 'text-slate-600 hover:text-slate-900' : 'text-zinc-400 hover:text-zinc-100'
+              className={`p-2 rounded-xl transition-all cursor-pointer active:scale-90 border ${
+                isLight
+                  ? 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700'
+                  : 'bg-zinc-900/80 hover:bg-zinc-800 border-zinc-800/80 text-zinc-300 hover:text-white'
               }`}
               title="Previous track"
             >
               <SkipBack className="w-4 h-4 fill-current" />
             </button>
 
-            {/* Play / Pause / Loading */}
+            {/* Centerpiece Master Rotary Transport Button (Play / Pause / Loading) */}
             <button
               id="player-play-pause-btn"
               onClick={onTogglePlay}
-              className={`w-9 h-9 rounded-full flex items-center justify-center hover:scale-105 transition-all shadow-md cursor-pointer ${
+              className={`group relative w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all shadow-xl cursor-pointer active:scale-95 select-none ${
                 isLiquid
-                  ? 'bg-white text-zinc-950 hover:bg-white/95 shadow-[0_0_15px_rgba(255,255,255,0.4)]'
+                  ? 'bg-gradient-to-b from-white to-zinc-200 text-zinc-950 ring-2 ring-cyan-400/40 shadow-[0_0_20px_rgba(56,189,248,0.4)]'
                   : isLight
-                  ? 'bg-slate-900 text-white hover:bg-slate-800'
-                  : 'bg-zinc-100 text-zinc-950 hover:bg-white'
+                  ? 'bg-slate-900 text-white ring-2 ring-slate-400/30 hover:bg-slate-800 shadow-slate-900/20'
+                  : isPlaying
+                  ? 'bg-gradient-to-b from-cyan-400 to-cyan-500 text-zinc-950 ring-4 ring-cyan-400/30 shadow-[0_0_24px_rgba(6,182,212,0.5)]'
+                  : 'bg-gradient-to-b from-zinc-100 to-zinc-300 text-zinc-950 ring-2 ring-white/20 hover:from-white hover:to-zinc-200 shadow-lg'
               }`}
-              title={isPlaying ? 'Pause' : 'Play'}
+              title={isPlaying ? 'Pause playback' : 'Start playback'}
             >
+              {/* Outer concentric groove bezel */}
+              <span className="absolute inset-0.5 rounded-full border border-black/10 pointer-events-none" />
+
               {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin text-current" />
+                <Loader2 className="w-5 h-5 animate-spin text-current" />
               ) : isPlaying ? (
-                <Pause className="w-4 h-4 fill-current" />
+                <Pause className="w-5 h-5 fill-current transition-transform group-hover:scale-105" />
               ) : (
-                <Play className="w-4 h-4 fill-current ml-0.5" />
+                <Play className="w-5 h-5 fill-current ml-0.5 transition-transform group-hover:scale-105" />
               )}
             </button>
 
-            {/* Next */}
+            {/* Next Track */}
             <button
               id="player-next-btn"
               onClick={onNext}
-              className={`p-1.5 transition-colors cursor-pointer ${
-                isLight ? 'text-slate-600 hover:text-slate-900' : 'text-zinc-400 hover:text-zinc-100'
+              className={`p-2 rounded-xl transition-all cursor-pointer active:scale-90 border ${
+                isLight
+                  ? 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700'
+                  : 'bg-zinc-900/80 hover:bg-zinc-800 border-zinc-800/80 text-zinc-300 hover:text-white'
               }`}
               title="Next track"
             >
               <SkipForward className="w-4 h-4 fill-current" />
             </button>
 
-            {/* Repeat */}
+            {/* Repeat Toggle */}
             <button
               id="player-repeat-btn"
               onClick={onToggleRepeat}
-              className={`p-1.5 rounded-md transition-colors cursor-pointer ${
+              className={`relative p-1.5 rounded-lg border transition-all cursor-pointer active:scale-90 ${
                 repeatMode !== 'off'
-                  ? 'text-cyan-400'
+                  ? 'bg-cyan-500/15 border-cyan-400/50 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.3)]'
                   : isLight
-                  ? 'text-slate-400 hover:text-slate-700'
-                  : 'text-zinc-500 hover:text-zinc-300'
+                  ? 'bg-slate-100 border-slate-200 text-slate-500 hover:text-slate-800'
+                  : 'bg-zinc-900/80 border-zinc-800 text-zinc-400 hover:text-zinc-200'
               }`}
               title={`Repeat mode: ${repeatMode}`}
             >
               {repeatMode === 'one' ? <Repeat1 className="w-3.5 h-3.5" /> : <Repeat className="w-3.5 h-3.5" />}
+              {repeatMode !== 'off' && (
+                <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_4px_rgba(6,182,212,0.9)]" />
+              )}
             </button>
           </div>
 

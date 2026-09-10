@@ -108,3 +108,23 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(150, 150, 150, 0.45);
 }
+
+/* Mobile Safe Area Insets for Android Status Bar and 3-Button Navigation */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-top-nav {
+  padding-top: max(env(safe-area-inset-top, 0px), 1.75rem);
+}
+@media (min-width: 768px) {
+  .safe-top-nav {
+    padding-top: 0.75rem;
+  }
+}
+
+.safe-bottom-bar {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 1.25rem);
+}
+
